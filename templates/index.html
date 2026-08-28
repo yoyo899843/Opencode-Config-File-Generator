@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>opencode.jsonc 產生器</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2f3a;
+    --text: #e6e8eb;
+    --muted: #9aa2af;
+    --accent: #4f8cff;
+    --error-bg: #3a1c1c;
+    --error-border: #7a3030;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 2rem 1rem 4rem;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  p.subtitle { color: var(--muted); margin-top: 0; margin-bottom: 1.5rem; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.3rem; }
+  .field { margin-bottom: 1rem; }
+  .row { display: flex; gap: 1rem; }
+  .row .field { flex: 1; }
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    padding: 0.55rem 0.65rem;
+    background: #0d0f13;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 0.95rem;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .checkbox-field { display: flex; align-items: center; gap: 0.5rem; }
+  .checkbox-field label { margin: 0; color: var(--text); font-size: 0.9rem; }
+  button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.65rem 1.4rem;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+  button:hover { filter: brightness(1.08); }
+  .hint { color: var(--muted); font-size: 0.8rem; margin-top: 0.35rem; }
+  .error {
+    background: var(--error-bg);
+    border: 1px solid var(--error-border);
+    border-radius: 8px;
+    padding: 0.9rem 1rem;
+    margin-bottom: 1.5rem;
+    color: #ffb4b4;
+    font-size: 0.9rem;
+  }
+  .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem; }
+  .result-header h2 { font-size: 1.05rem; margin: 0; }
+  .badge { color: var(--muted); font-size: 0.85rem; }
+  textarea {
+    width: 100%;
+    height: 420px;
+    background: #0d0f13;
+    color: #d7dbe0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.9rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    white-space: pre;
+    resize: vertical;
+  }
+  .actions { display: flex; gap: 0.6rem; margin-top: 0.75rem; flex-wrap: wrap; }
+  .actions button.secondary { background: #2a2f3a; }
+  .actions button.secondary:hover { background: #343a47; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>opencode.jsonc 產生器</h1>
+  <p class="subtitle">輸入 OpenAI 相容 API 的端點，自動呼叫 <code>/v1/models</code> 並產生 opencode 的自訂 provider 設定檔。</p>
+
+  {% if error %}
+  <div class="error">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" class="card">
+    <div class="field">
+      <label for="endpoint">API 端點網址</label>
+      <input type="text" id="endpoint" name="endpoint" placeholder="https://api.example.com" value="{{ form_values.endpoint }}" required>
+      <div class="hint">會自動補上 /v1，並呼叫 {端點}/v1/models</div>
+    </div>
+
+    <div class="field">
+      <label for="api_key">API Key（選填）</label>
+      <input type="password" id="api_key" name="api_key" placeholder="sk-..." value="{{ form_values.api_key }}" autocomplete="off">
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="provider_id">Provider ID（選填）</label>
+        <input type="text" id="provider_id" name="provider_id" placeholder="例如 my-provider" value="{{ form_values.provider_id }}">
+      </div>
+      <div class="field">
+        <label for="provider_name">Provider 顯示名稱（選填）</label>
+        <input type="text" id="provider_name" name="provider_name" placeholder="例如 My Provider" value="{{ form_values.provider_name }}">
+      </div>
+    </div>
+
+    <button type="submit">產生 opencode.jsonc</button>
+  </form>
+
+  {% if result %}
+  <div class="card">
+    <div class="result-header">
+      <h2>產生結果</h2>
+      <span class="badge">共 {{ model_count }} 個模型</span>
+    </div>
+    <textarea id="output" readonly>{{ result }}</textarea>
+    <div class="actions">
+      <button type="button" onclick="copyOutput()">複製內容</button>
+      <button type="button" class="secondary" onclick="downloadOutput()">下載 opencode.jsonc</button>
+    </div>
+    <div class="hint" style="margin-top: 1rem;">
+      請將檔案放到以下路徑：<br>
+      Linux / macOS：<code>~/.config/opencode/opencode.jsonc</code><br>
+      Windows：<code>C:\Users\{username}\.config\opencode\opencode.jsonc</code>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function copyOutput() {
+  const el = document.getElementById('output');
+  el.select();
+  navigator.clipboard.writeText(el.value).catch(() => document.execCommand('copy'));
+}
+
+function downloadOutput() {
+  const el = document.getElementById('output');
+  const blob = new Blob([el.value], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'opencode.jsonc';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
