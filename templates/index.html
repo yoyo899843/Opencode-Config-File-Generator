@@ -105,7 +105,7 @@
     <div class="field">
       <label for="endpoint">API 端點網址</label>
       <input type="text" id="endpoint" name="endpoint" placeholder="https://api.example.com" value="{{ form_values.endpoint }}" required>
-      <div class="hint">會自動補上 /v1，並呼叫 {端點}/v1/models</div>
+      <div class="hint">會自動補上 /v1，並呼叫 {端點}/v1/models 取得 model 資訊</div>
     </div>
 
     <div class="field">
@@ -142,6 +142,7 @@
       請將檔案放到以下路徑：<br>
       Linux / macOS：<code>~/.config/opencode/opencode.jsonc</code><br>
       Windows：<code>C:\Users\{username}\.config\opencode\opencode.jsonc</code>
+      Source Code: <a href="https://github.com/yoyo899843/Opencode-Config-File-Generator">Github</a>
     </div>
   </div>
   {% endif %}
